@@ -1,65 +1,98 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# 1. Configuración de la pestaña y Estilo (CSS) para que sea Morado Oscuro
-st.set_page_config(page_title="BitPlay.io | Juegos Gratis", layout="wide", page_icon="🎮")
+# Configuración base
+st.set_page_config(page_title="BitPlay.io", layout="wide", page_icon="🎮")
 
+# --- ESTILO CSS PERSONALIZADO ---
 st.markdown("""
     <style>
-    /* Fondo morado oscuro */
-    .stApp {
-        background-color: #1a0a2e;
-        color: #ffffff;
-    }
-    /* Estilo para las tarjetas de juegos */
-    .game-card {
-        background-color: #2d1b4d;
-        border-radius: 15px;
-        padding: 10px;
-        text-align: center;
+    .stApp { background-color: #120522; color: white; }
+    
+    /* Cuadros chiquitos de juegos */
+    .game-thumb {
         border: 2px solid #7000ff;
+        border-radius: 10px;
+        padding: 5px;
+        text-align: center;
+        cursor: pointer;
         transition: 0.3s;
+        background: #1a0a2e;
     }
-    .game-card:hover {
-        border-color: #00f2ff;
-        transform: scale(1.05);
-    }
+    .game-thumb:hover { border-color: #00f2ff; transform: scale(1.05); }
+    
+    /* Barra lateral */
+    .css-1d391kg { background-color: #1a0a2e; } 
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Encabezado con tu Logo
-# Nota: Asegúrate de subir tu logo al repo con el nombre 'logo.png'
-col_logo, col_vacia = st.columns([1, 4])
-with col_logo:
+# --- BASE DE DATOS DE JUEGOS (Ejemplo) ---
+# Aquí irás agregando tus miles de juegos
+if 'juegos' not in st.session_state:
+    st.session_state.juegos = [
+        {"id": 1, "nombre": "Hextris", "cat": "Puzzles", "url": "https://hextris.io/", "img": "https://via.placeholder.com/150/7000ff/ffffff?text=Hextris"},
+        {"id": 2, "nombre": "Moto X3M", "cat": "Conduccion", "url": "https://games.gamepix.com/play/40141", "img": "https://via.placeholder.com/150/7000ff/ffffff?text=MotoX3M"},
+        {"id": 3, "nombre": "Space Invaders", "cat": "Accion", "url": "https://p2.friv.com/z/juegos/space-invaders/juego.html", "img": "https://via.placeholder.com/150/7000ff/ffffff?text=Space"},
+    ]
+
+# --- LÓGICA DE NAVEGACIÓN ---
+if 'vista' not in st.session_state:
+    st.session_state.vista = 'inicio'
+if 'juego_actual' not in st.session_state:
+    st.session_state.juego_actual = None
+
+# --- BARRA LATERAL (SIDEBAR) ---
+with st.sidebar:
     try:
-        st.image("logo.png", width=150)
+        st.image("logo.png", width=120)
     except:
-        st.title("👾 BitPlay.io")
+        st.header("BitPlay")
+    
+    st.write("### Categorías")
+    cat_seleccionada = st.radio("", ["Todos", "Accion", "Aventura", "Puzzles", "Conduccion"], label_visibility="collapsed")
+    
+    if st.button("🏠 Volver al Inicio"):
+        st.session_state.vista = 'inicio'
+        st.rerun()
 
-# 3. Buscador y Categorías
-st.sidebar.title("🎮 Menú Principal")
-categoria = st.sidebar.radio("Categorías:", ["Todos", "Acción", "Aventura", "Puzzles"])
+# --- VISTA DE INICIO (CUADRÍCULA) ---
+if st.session_state.vista == 'inicio':
+    st.title("🎮 BitPlay.io")
+    
+    # Filtrar juegos por categoría
+    juegos_filtrados = [j for j in st.session_state.juegos if cat_seleccionada == "Todos" or j['cat'] == cat_seleccionada]
+    
+    # Cuadrícula de cuadros chiquitos (5 columnas para que sean pequeños)
+    cols = st.columns(5)
+    for i, juego in enumerate(juegos_filtrados):
+        with cols[i % 5]:
+            st.markdown(f'<div class="game-thumb">', unsafe_allow_html=True)
+            st.image(juego['img'], use_container_width=True)
+            if st.button(f"Jugar {juego['nombre']}", key=f"btn_{juego['id']}"):
+                st.session_state.juego_actual = juego
+                st.session_state.vista = 'juego'
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
-st.write("---")
-st.subheader("🔥 Juegos Destacados")
-
-# 4. Cuadrícula de Juegos (PC-Phone Friendly)
-# Usamos columnas que Streamlit adapta automáticamente
-cols = st.columns([1, 1, 1])
-
-# Simularemos 3 juegos para empezar (puedes añadir miles después)
-# Los links de 'url' son de ejemplo, aquí pegarás los de GamePix/Famobi
-juegos = [
-    {"titulo": "Hextris", "url": "https://hextris.io/"},
-    {"titulo": "2048", "url": "https://play2048.co/"},
-    {"titulo": "Tower Game", "url": "https://tower-game.github.io/"}
-]
-
-for i, juego in enumerate(juegos):
-    with cols[i % 3]:
-        st.markdown(f'<div class="game-card"><h3>{juego["titulo"]}</h3></div>', unsafe_allow_html=True)
-        # El componente iframe es el que carga el juego real
-        components.iframe(juego["url"], height=450, scrolling=True)
-        st.button(f"Votar 👍", key=f"btn_{i}")
-
-st.sidebar.info("BitPlay.io - Versión Alpha (Gasto $0)")
+# --- VISTA DE JUEGO (REPRODUCTOR) ---
+elif st.session_state.vista == 'juego':
+    j = st.session_state.juego_actual
+    st.markdown(f"<h2 style='text-align: center;'> < {j['nombre']} > </h2>", unsafe_allow_html=True)
+    
+    # Contenedor del juego
+    components.iframe(j['url'], height=600, scrolling=True)
+    
+    # Botón Pantalla Completa (Instrucción al usuario ya que por seguridad de navegador el iframe tiene límites)
+    st.info("💡 Consejo: Muchos juegos tienen su propio botón de pantalla completa abajo a la derecha.")
+    
+    # Sección de Like/Dislike y Comentarios
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.button("👍 Me gusta", use_container_width=True)
+    with col2:
+        st.button("👎 No me gusta", use_container_width=True)
+    
+    st.write("---")
+    st.subheader("💬 Comentarios")
+    st.text_input("Escribe qué te pareció el juego...", placeholder="¡Este juego es genial!")
+    st.button("Publicar comentario")
